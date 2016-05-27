@@ -1,12 +1,12 @@
-﻿PlatformSpecific
+PlatformSpecific
 ==================
 
 This analyzer helps make sure that your Win10 apps are *universal* - will run on all Win10 devices.
 
 * References > Manage NuGet References > install [PlatformSpecific.Analyzer](https://www.nuget.org/packages/PlatformSpecific.Analyzer)
-* [Watch training video](https://github.com/ljw1004/blog/raw/master/Analyzers/PlatformSpecificAnalyzer/ReadMe.mp4) [3mins]
+* [Watch training video](https://github.com/ljw1004/platform-specific-analyzer/raw/master/ReadMe.mp4) [3mins]
 
-![screenshot](https://raw.githubusercontent.com/ljw1004/blog/master/Analyzers/PlatformSpecificAnalyzer/Screenshot.png)
+![screenshot](https://github.com/ljw1004/platform-specific-analyzer/raw/master/Screenshot.png)
 
 
 Explanation
