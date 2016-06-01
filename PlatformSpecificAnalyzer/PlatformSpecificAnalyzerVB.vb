@@ -285,7 +285,10 @@ Public Class PlatformSpecificFixerVB
             Else
                 Dim conditionString1 = SyntaxFactory.StringLiteralExpression(SyntaxFactory.StringLiteralToken($"""{g.TypeToCheck}""", g.TypeToCheck))
                 Dim conditionString2 = SyntaxFactory.StringLiteralExpression(SyntaxFactory.StringLiteralToken($"""{g.MemberToCheck}""", g.MemberToCheck))
-                Dim conditions As IEnumerable(Of ArgumentSyntax) = {SyntaxFactory.SimpleArgument(conditionString1), SyntaxFactory.SimpleArgument(conditionString2)}
+                Dim conditionInt3 = SyntaxFactory.LiteralExpression(SyntaxKind.NumericLiteralExpression, SyntaxFactory.Literal(If(g.ParameterCountToCheck, 0)))
+                Dim conditions As IEnumerable(Of ArgumentSyntax) = Nothing
+                If g.ParameterCountToCheck.HasValue Then conditions = {SyntaxFactory.SimpleArgument(conditionString1), SyntaxFactory.SimpleArgument(conditionString2), SyntaxFactory.SimpleArgument(conditionInt3)}
+                If Not g.ParameterCountToCheck.HasValue Then conditions = {SyntaxFactory.SimpleArgument(conditionString1), SyntaxFactory.SimpleArgument(conditionString2)}
                 conditionArgument = SyntaxFactory.ArgumentList(SyntaxFactory.SeparatedList(conditions))
             End If
             Dim condition = SyntaxFactory.InvocationExpression(conditionReceiver, conditionArgument)

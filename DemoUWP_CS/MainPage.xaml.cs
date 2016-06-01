@@ -31,14 +31,6 @@ namespace DemoUWP_CS
             Windows.Devices.Bluetooth.Rfcomm.RfcommServiceProvider provider = null;
             provider.StartAdvertising(null); // present from 10240
             provider.StartAdvertising(null, false); // overload introduced in 10586
-
-            Windows.UI.Xaml.Thickness t = default(Windows.UI.Xaml.Thickness);
-            System.Diagnostics.Debug.WriteLine(t);
-
-            // UniversalApiContract 1.0 and 2.0: gl.Value, gl.GridUnitType
-            // System.Runtime.WindowsRuntime.UI.Xaml.dll: a load more of them
-            var a1 = Windows.UI.Xaml.GridLength.Auto;  // System.Runtime
-            var a2 = default(Windows.UI.Xaml.GridLength).Value;  // UniversalApiContract
         }
 
         private async void buttonMobile_Click(object sender, RoutedEventArgs e)

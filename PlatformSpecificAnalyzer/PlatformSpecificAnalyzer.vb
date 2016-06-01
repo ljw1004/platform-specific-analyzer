@@ -22,16 +22,19 @@ End Enum
 Public Structure Platform
     Public Kind As PlatformKind
     Public Version As String ' For UWP, this is version 10240 or 10586. For User, the fully qualified name of the attribute in use
+    Public ByParameterCount As Boolean ' For UWP only
 
-    Public Sub New(kind As PlatformKind, Optional version As String = Nothing)
+    Public Sub New(kind As PlatformKind, Optional version As String = Nothing, Optional byParameterCount As Boolean = False)
         Me.Kind = kind
         Me.Version = version
+        Me.ByParameterCount = byParameterCount
         Select Case kind
             Case PlatformKind.Unchecked : If version IsNot Nothing Then Throw New ArgumentException("No version expected")
             Case PlatformKind.Uwp : If version <> "10240" AndAlso version <> "10586" Then Throw New ArgumentException("Only known SDKs are 10240 and 10586")
             Case PlatformKind.ExtensionSDK : If version IsNot Nothing Then Throw New ArgumentException("Don't specify versions for extension SDKs")
             Case PlatformKind.User : If Not version?.EndsWith("Specific") Then Throw New ArgumentException("User specific should end in Specific")
         End Select
+        If byParameterCount AndAlso kind <> PlatformKind.Uwp Then Throw New ArgumentException("Only UWP can be distinguished by parameter count")
     End Sub
 
     Public Shared Function OfSymbol(symbol As ISymbol) As Platform
@@ -72,13 +75,17 @@ Public Structure Platform
                 Dim d = GetUniversalApiAdditions()
                 Dim isType = (symbol.Kind = SymbolKind.NamedType)
                 Dim typeName = If(isType, symbol.ToDisplayString, symbol.ContainingType.ToDisplayString)
-                Dim newMembers As List(Of String) = Nothing
+                Dim newMembers As List(Of NewMember) = Nothing
                 Dim in10586 = d.TryGetValue(typeName, newMembers)
                 If Not in10586 Then Return New Platform(PlatformKind.Uwp, "10240") ' the type was in 10240
                 If newMembers Is Nothing Then Return New Platform(PlatformKind.Uwp, "10586") ' the entire type was new in 10586
                 If isType Then Return New Platform(PlatformKind.Uwp, "10240") ' the type was in 10240, even though members are new in 10586
                 Dim memberName = symbol.Name
-                If newMembers.Contains(memberName) Then Return New Platform(PlatformKind.Uwp, "10586") ' this member was new in 10586
+                For Each newMember In newMembers
+                    If memberName = newMember.Name And Not newMember.ParameterCount.HasValue Then Return New Platform(PlatformKind.Uwp, "10586") ' this member was new in 10586
+                    If symbol.Kind <> SymbolKind.Method Then Continue For
+                    If memberName = newMember.Name AndAlso CType(symbol, IMethodSymbol).Parameters.Count = newMember.ParameterCount Then Return New Platform(PlatformKind.Uwp, "10586", True)
+                Next
                 Return New Platform(PlatformKind.Uwp, "10240") ' this member existed in 10240
             End If
 
@@ -98,6 +105,7 @@ End Structure
 Class HowToGuard
     Public TypeToCheck As String
     Public MemberToCheck As String
+    Public ParameterCountToCheck As Integer?
     Public KindOfCheck As String = "IsTypePresent"
     Public AttributeToIntroduce As String = "System.Runtime.CompilerServices.PlatformSpecific"
     Public AttributeFriendlyName As String = "PlatformSpecific"
@@ -117,7 +125,7 @@ Class HowToGuard
             Return New HowToGuard With {.TypeToCheck = target.ToDisplayString}
         ElseIf plat.Kind = PlatformKind.Uwp AndAlso target.Kind <> SymbolKind.NamedType Then
             Dim g As New HowToGuard With {.TypeToCheck = target.ContainingType.ToDisplayString}
-            Dim d = GetUniversalApiAdditions(), newMembers As List(Of String) = Nothing
+            Dim d = GetUniversalApiAdditions(), newMembers As List(Of NewMember) = Nothing
             If Not d.TryGetValue(g.TypeToCheck, newMembers) Then Throw New InvalidOperationException("oops! expected this UWP version API to be in the dictionary of new things")
             If newMembers IsNot Nothing Then
                 g.MemberToCheck = target.Name
@@ -125,6 +133,7 @@ Class HowToGuard
                 If target.Kind = SymbolKind.Event Then g.KindOfCheck = "IsEventPresent"
                 If target.Kind = SymbolKind.Property Then g.KindOfCheck = "IsPropertyPresent" ' TODO: if SDK starts introducing additional accessors on properties, we'll have to change this
                 If target.Kind = SymbolKind.Method Then g.KindOfCheck = "IsMethodPresent"
+                If target.Kind = SymbolKind.Method AndAlso plat.ByParameterCount Then g.ParameterCountToCheck = CType(target, IMethodSymbol).Parameters.Count
             End If
             Return g
         Else
@@ -179,10 +188,22 @@ Module PlatformSpecificAnalyzer
         Return (GetPlatformSpecificAttribute(symbol) IsNot Nothing)
     End Function
 
+    Structure NewMember
+        Public Name As String
+        Public ParameterCount As Integer?
 
-    Function GetUniversalApiAdditions() As Dictionary(Of String, List(Of String))
-        ' I don't yet know what the new Windows SDK will be like, nor what new types it will add.
-        ' As a placeholder, to test my code, I'm going to pretend that these two APIs from the existing SDK are actually new...
+        Sub New(s As String)
+            If s.Length > 2 AndAlso s(s.Length - 2) = "#"c Then
+                Name = s.Substring(0, s.Length - 2)
+                ParameterCount = Integer.Parse(s.Substring(s.Length - 1))
+            Else
+                Name = s
+                ParameterCount = Nothing
+            End If
+        End Sub
+    End Structure
+
+    Function GetUniversalApiAdditions() As Dictionary(Of String, List(Of NewMember))
         Static Dim _d As New Dictionary(Of String, List(Of String)) From {
     {"Windows.ApplicationModel.Activation.ActivationKind", "DevicePairing", "Print3DWorkflow"},
     {"Windows.ApplicationModel.Activation.DevicePairingActivatedEventArgs"},
@@ -224,7 +245,7 @@ Module PlatformSpecificAnalyzer
     {"Windows.Devices.Bluetooth.BluetoothLEAppearanceCategories"},
     {"Windows.Devices.Bluetooth.BluetoothLEAppearanceSubcategories"},
     {"Windows.Devices.Bluetooth.BluetoothLEDevice", "Appearance", "BluetoothAddressType", "DeviceInformation", "FromBluetoothAddressAsync", "GetDeviceSelectorFromAppearance", "GetDeviceSelectorFromBluetoothAddress", "GetDeviceSelectorFromConnectionStatus", "GetDeviceSelectorFromDeviceName", "GetDeviceSelectorFromPairingState"},
-    {"Windows.Devices.Bluetooth.Rfcomm.RfcommServiceProvider", "StartAdvertising"},
+    {"Windows.Devices.Bluetooth.Rfcomm.RfcommServiceProvider", "StartAdvertising#2"},
     {"Windows.Devices.Enumeration.DeviceInformationCustomPairing"},
     {"Windows.Devices.Enumeration.DeviceInformationPairing", "Custom", "PairAsync", "ProtectionLevel", "TryRegisterForAllInboundPairingRequests", "UnpairAsync"},
     {"Windows.Devices.Enumeration.DevicePairingKinds"},
@@ -408,9 +429,13 @@ Module PlatformSpecificAnalyzer
     {"Windows.Web.Http.Filters.HttpBaseProtocolFilter", "CookieUsageBehavior"},
     {"Windows.Web.Http.Filters.HttpCookieUsageBehavior"}
                 }
-        Return _d
-    End Function
 
+        Static Dim _d2 As Dictionary(Of String, List(Of NewMember)) =
+            (From kvp In _d
+             Let members = If(kvp.Value Is Nothing, Nothing, kvp.Value.Select(Function(s) New NewMember(s)).ToList())
+             Select type = kvp.Key, members).ToDictionary(Function(tm) tm.type, Function(tm) tm.members)
+        Return _d2
+    End Function
 
     <Extension>
     Sub Add(d As Dictionary(Of String, List(Of String)), type As String, ParamArray members As String())
