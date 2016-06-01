@@ -52,8 +52,8 @@ Public Structure Platform
             ' In those two targets, every Windows type is found in Windows.winmd, so that's how we'll suppress it:
             If assembly = "Windows" Then Return New Platform(PlatformKind.Unchecked)
 
-            ' Some WinRT types like Windows.UI.Color get projected to come from this assembly:
-            If assembly = "System.Runtime.WindowsRuntime" Then Return New Platform(PlatformKind.Uwp, "10240")
+            ' Some WinRT types like Windows.UI.Color get projected to come from .NET assemblies, always present:
+            If assembly.StartsWith("System.Runtime.") Then Return New Platform(PlatformKind.Uwp, "10240")
 
             ' Some things are emphatically part of UWP.10240
             If assembly = "Windows.Foundation.FoundationContract" OrElse
