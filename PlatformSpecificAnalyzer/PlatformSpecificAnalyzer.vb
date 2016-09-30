@@ -72,22 +72,28 @@ Public Structure Platform
 
             ' Some things in UWP have been added between 10240 and 10586
             If assembly = "Windows.Foundation.UniversalApiContract" Then
-                Dim d10586 = GetUniversalApiAdditions10586()
-                Dim d14393 = GetUniversalApiAdditions14393()
                 Dim isType = (symbol.Kind = SymbolKind.NamedType)
                 Dim typeName = If(isType, symbol.ToDisplayString, symbol.ContainingType.ToDisplayString)
                 Dim newMembers As List(Of NewMember) = Nothing
-                Dim in10586 = d10586.TryGetValue(typeName, newMembers)
-                If Not in10586 Then Return New Platform(PlatformKind.Uwp, "10240") ' the type was in 10240
-                If newMembers Is Nothing Then Return New Platform(PlatformKind.Uwp, "10586") ' the entire type was new in 10586
-                If isType Then Return New Platform(PlatformKind.Uwp, "10240") ' the type was in 10240, even though members are new in 10586
-                Dim memberName = symbol.Name
-                For Each newMember In newMembers
-                    If memberName = newMember.Name And Not newMember.ParameterCount.HasValue Then Return New Platform(PlatformKind.Uwp, "10586") ' this member was new in 10586
-                    If symbol.Kind <> SymbolKind.Method Then Continue For
-                    If memberName = newMember.Name AndAlso CType(symbol, IMethodSymbol).Parameters.Count = newMember.ParameterCount Then Return New Platform(PlatformKind.Uwp, "10586", True)
-                Next
-                Return New Platform(PlatformKind.Uwp, "10240") ' this member existed in 10240
+                Dim in10586 = CheckCollectionForType(GetUniversalApiAdditions10586(), typeName, symbol)
+                If in10586 = 0 Then
+                    Return New Platform(PlatformKind.Uwp, "10586") ' the entire type was found in 10586
+                ElseIf in10586 = 1 Then
+                    Return New Platform(PlatformKind.Uwp, "10586", True) ' the entire type was found in 10586 with matching parameter lengths
+                Else
+                    Dim in14393 = CheckCollectionForType(GetUniversalApiAdditions14393(), typeName, symbol)
+
+                    If in14393 = 0 Then
+                        Return New Platform(PlatformKind.Uwp, "14393") ' the entire type was found in 14393
+                    ElseIf in14393 = 1 Then
+                        Return New Platform(PlatformKind.Uwp, "14393", True) ' the entire type was found in 14393 with matching parameter lengths
+                    Else
+                        Return New Platform(PlatformKind.Uwp, "10240") ' the type was in 10240
+                    End If
+
+                End If
+
+                '                Return New Platform(PlatformKind.Uwp, "10240") ' this member existed in 10240
             End If
 
             ' All other Windows.* types come from platform-specific extensions
@@ -99,6 +105,25 @@ Public Structure Platform
             Return New Platform(PlatformKind.Unchecked)
         End If
     End Function
+
+    Private Shared Function CheckCollectionForType(collection As Dictionary(Of String, List(Of NewMember)), typeName As String, symbol As ISymbol) As Int16
+        Dim newMembers As List(Of NewMember) = Nothing
+        Dim in10586 = collection.TryGetValue(typeName, newMembers)
+
+        If newMembers Is Nothing Then Return 0 ' the entire type was new in this collection
+
+        If symbol.Kind = SymbolKind.NamedType Then Return -1
+
+        Dim memberName = symbol.Name
+        For Each newMember In newMembers
+            If memberName = newMember.Name And Not newMember.ParameterCount.HasValue Then Return 0 ' this member was new in collection
+            If symbol.Kind <> SymbolKind.Method Then Continue For
+            If memberName = newMember.Name AndAlso CType(symbol, IMethodSymbol).Parameters.Count = newMember.ParameterCount Then Return 1
+        Next
+
+        Return -1 ' this member existed in a different collection
+    End Function
+
 End Structure
 
 
