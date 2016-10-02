@@ -1,21 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
 using Windows.Media.Devices;
 using Windows.System.UserProfile;
 using Windows.UI.ViewManagement;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Controls.Primitives;
-using Windows.UI.Xaml.Data;
-using Windows.UI.Xaml.Input;
-using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Media.Imaging;
-using Windows.UI.Xaml.Navigation;
 
 namespace DemoUWP_CS
 {
@@ -70,6 +59,11 @@ namespace DemoUWP_CS
             var jumps = Windows.UI.StartScreen.JumpList.IsSupported();
             Windows.ApplicationModel.Store.Preview.StoreConfiguration.PurchasePromptingPolicy = null;
             var size = Windows.Graphics.Display.DisplayInformation.GetForCurrentView().DiagonalSizeInInches;
+        }
+
+        private void button14393_Click(object sender, RoutedEventArgs e)
+        {
+            Windows.ApplicationModel.Core.CoreApplication.EnablePrelaunch(true);
         }
     }
 }
