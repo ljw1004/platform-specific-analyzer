@@ -170,8 +170,17 @@ End Class
 
 
 Module PlatformSpecificAnalyzer
-    Public RulePlatform As New DiagnosticDescriptor("UWP001", "Platform-specific", "Platform-specific code", "Safety", DiagnosticSeverity.Warning, True)
-    Public RuleVersion As New DiagnosticDescriptor("UWP002", "Version-specific", "Version-specific code", "Safety", DiagnosticSeverity.Warning, True)
+    Public Function CreatePlatformRule(targetPlatform As Platform) As DiagnosticDescriptor
+        Return New DiagnosticDescriptor("UWP001", "Platform-specific", $"Platform-specific code ({targetPlatform.Kind})",
+                                        "Safety", DiagnosticSeverity.Warning, True)
+    End Function
+
+    Public Function CreateVersionRule(targetPlatform As Platform) As DiagnosticDescriptor
+        Return New DiagnosticDescriptor("UWP002", "Version-specific", $"Version-specific code ({targetPlatform.Version})",
+                                        "Safety", DiagnosticSeverity.Warning, True)
+    End Function
+    Public GenericRulePlatform As New DiagnosticDescriptor("UWP001", "Platform-specific", "Platform-specific code", "Safety", DiagnosticSeverity.Warning, True)
+    Public GenericRuleVersion As New DiagnosticDescriptor("UWP002", "Version-specific", "Version-specific code", "Safety", DiagnosticSeverity.Warning, True)
 
     Function GetTargetPlatformMinVersion(additionalFiles As ImmutableArray(Of AdditionalText)) As Integer
         ' When PlatformSpecificAnalyzer is build as a NuGet package, the package includes

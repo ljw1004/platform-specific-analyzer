@@ -18,7 +18,7 @@ Public Class PlatformSpecificAnalyzerVB
 
     Public Overrides ReadOnly Property SupportedDiagnostics As ImmutableArray(Of DiagnosticDescriptor)
         Get
-            Return ImmutableArray.Create(RulePlatform, RuleVersion)
+            Return ImmutableArray.Create(GenericRulePlatform, GenericRuleVersion)
         End Get
     End Property
 
@@ -84,7 +84,7 @@ Public Class PlatformSpecificAnalyzerVB
         If Not loc.IsInSource Then Return
         Dim line = loc.GetLineSpan().StartLinePosition.Line
         If reports.ContainsKey(line) AndAlso reports(line).Location.SourceSpan.Start <= loc.SourceSpan.Start Then Return
-        reports(line) = Diagnostic.Create(If(plat.Kind = PlatformKind.Uwp, RuleVersion, RulePlatform), loc)
+        reports(line) = Diagnostic.Create(If(plat.Kind = PlatformKind.Uwp, CreateVersionRule(plat), CreatePlatformRule(plat)), loc)
     End Sub
 
     Shared Function GetTargetOfNode(node As SyntaxNode, sm As SemanticModel) As ISymbol
