@@ -36,5 +36,9 @@ Public NotInheritable Class MainPage
         Dim jumps = Windows.UI.StartScreen.JumpList.IsSupported()
         Dim size = Windows.Graphics.Display.DisplayInformation.GetForCurrentView().DiagonalSizeInInches
     End Sub
+
+    Private Sub button14393_Click(sender As Object, e As RoutedEventArgs) Handles button14393.Click
+        Windows.ApplicationModel.Core.CoreApplication.EnablePrelaunch(True)
+    End Sub
 End Class
 

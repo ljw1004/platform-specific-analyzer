@@ -21,7 +21,7 @@ End Enum
 
 Public Structure Platform
     Public Kind As PlatformKind
-    Public Version As String ' For UWP, this is version 10240 or 10586. For User, the fully qualified name of the attribute in use
+    Public Version As String ' For UWP, this is version 10240, 10586, or 14393. For User, the fully qualified name of the attribute in use
     Public ByParameterCount As Boolean ' For UWP only
 
     Public Sub New(kind As PlatformKind, Optional version As String = Nothing, Optional byParameterCount As Boolean = False)
@@ -30,7 +30,7 @@ Public Structure Platform
         Me.ByParameterCount = byParameterCount
         Select Case kind
             Case PlatformKind.Unchecked : If version IsNot Nothing Then Throw New ArgumentException("No version expected")
-            Case PlatformKind.Uwp : If version <> "10240" AndAlso version <> "10586" Then Throw New ArgumentException("Only known SDKs are 10240 and 10586")
+            Case PlatformKind.Uwp : If version <> "10240" AndAlso version <> "10586" AndAlso version <> "14393" Then Throw New ArgumentException("Only known SDKs are 10240, 10586, and 14393")
             Case PlatformKind.ExtensionSDK : If version IsNot Nothing Then Throw New ArgumentException("Don't specify versions for extension SDKs")
             Case PlatformKind.User : If Not version?.EndsWith("Specific") Then Throw New ArgumentException("User specific should end in Specific")
         End Select
@@ -108,9 +108,9 @@ Public Structure Platform
 
     Private Shared Function CheckCollectionForType(collection As Dictionary(Of String, List(Of NewMember)), typeName As String, symbol As ISymbol) As Int16
         Dim newMembers As List(Of NewMember) = Nothing
-        Dim in10586 = collection.TryGetValue(typeName, newMembers)
+        Dim inCollection = collection.TryGetValue(typeName, newMembers)
 
-        If newMembers Is Nothing Then Return 0 ' the entire type was new in this collection
+        If Not inCollection Or newMembers Is Nothing Then Return 0 ' the entire type was new in this collection
 
         If symbol.Kind = SymbolKind.NamedType Then Return -1
 
@@ -170,8 +170,17 @@ End Class
 
 
 Module PlatformSpecificAnalyzer
-    Public RulePlatform As New DiagnosticDescriptor("UWP001", "Platform-specific", "Platform-specific code", "Safety", DiagnosticSeverity.Warning, True)
-    Public RuleVersion As New DiagnosticDescriptor("UWP002", "Version-specific", "Version-specific code", "Safety", DiagnosticSeverity.Warning, True)
+    Public Function CreatePlatformRule(targetPlatform As Platform) As DiagnosticDescriptor
+        Return New DiagnosticDescriptor("UWP001", "Platform-specific", $"Platform-specific code ({targetPlatform.Kind})",
+                                        "Safety", DiagnosticSeverity.Warning, True)
+    End Function
+
+    Public Function CreateVersionRule(targetPlatform As Platform) As DiagnosticDescriptor
+        Return New DiagnosticDescriptor("UWP002", "Version-specific", $"Version-specific code ({targetPlatform.Version})",
+                                        "Safety", DiagnosticSeverity.Warning, True)
+    End Function
+    Public GenericRulePlatform As New DiagnosticDescriptor("UWP001", "Platform-specific", "Platform-specific code", "Safety", DiagnosticSeverity.Warning, True)
+    Public GenericRuleVersion As New DiagnosticDescriptor("UWP002", "Version-specific", "Version-specific code", "Safety", DiagnosticSeverity.Warning, True)
 
     Function GetTargetPlatformMinVersion(additionalFiles As ImmutableArray(Of AdditionalText)) As Integer
         ' When PlatformSpecificAnalyzer is build as a NuGet package, the package includes

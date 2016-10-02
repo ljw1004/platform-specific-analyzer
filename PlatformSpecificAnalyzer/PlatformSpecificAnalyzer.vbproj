@@ -130,13 +130,12 @@
     <None Include="nupkg\PlatformSpecificAnalyzer.png" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="My Project\AssemblyInfo.vb" />
     <Compile Include="PlatformSpecificAnalyzer.vb" />
     <Compile Include="PlatformSpecificAnalyzerCS.vb" />
     <Compile Include="PlatformSpecificAnalyzerVB.vb" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="My Project\" />
-  </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
     <ProjectReference Include="..\PlatformSpecific\PlatformSpecific.vbproj">
       <Project>{25ec45af-4df8-4c3b-b5e2-e3a23dbac14f}</Project>
